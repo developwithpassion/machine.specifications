@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 
 using Machine.Specifications.Model;
+using Machine.Specifications.Runner.Impl;
 using Machine.Specifications.Utility;
 
 namespace Machine.Specifications.Factories
@@ -45,12 +46,12 @@ namespace Machine.Specifications.Factories
       var itFieldInfos = new List<FieldInfo>();
       var itShouldBehaveLikeFieldInfos = new List<FieldInfo>();
 
-      var contextClauses = ExtractPrivateFieldValues<Establish>(instance,true);
+      var contextClauses = ExtractPrivateFieldValues<Establish>(instance, true);
       contextClauses.Reverse();
 
-      var cleanupClauses = ExtractPrivateFieldValues<Cleanup>(instance,true);
+      var cleanupClauses = ExtractPrivateFieldValues<Cleanup>(instance, true);
 
-      var becauses = ExtractPrivateFieldValues<Because>(instance,false);
+      var becauses = ExtractPrivateFieldValues<Because>(instance, false);
       becauses.Reverse();
 
       if (becauses.Count > _allowedNumberOfBecauseBlocks)
@@ -64,14 +65,14 @@ namespace Machine.Specifications.Factories
       var isIgnored = type.HasAttribute<IgnoreAttribute>();
       var tags = ExtractTags(type);
       var context = new Context(type,
-                                instance,
-                                contextClauses,
-                                becauses,
-                                cleanupClauses,
-                                concern,
-                                isIgnored,
-                                tags,
-                                isSetupForEachSpec);
+        instance,
+        contextClauses,
+        becauses,
+        cleanupClauses,
+        concern,
+        isIgnored,
+        tags,
+        isSetupForEachSpec);
 
       foreach (var info in fieldInfos)
       {
@@ -139,7 +140,7 @@ namespace Machine.Specifications.Factories
     }
 
     void CreateSpecificationsFromBehaviors(IEnumerable<FieldInfo> itShouldBehaveLikeFieldInfos,
-                                           Context context)
+      Context context)
     {
       foreach (var itShouldBehaveLikeFieldInfo in itShouldBehaveLikeFieldInfos)
       {
@@ -152,7 +153,10 @@ namespace Machine.Specifications.Factories
       }
     }
 
-    static void CollectDetailsOf<T>(Type target, Func<object> instanceResolver, ICollection<T> items,bool ensureMaximumOfOne)
+    static void CollectDetailsOf<T>(Type target,
+      Func<object> instanceResolver,
+      ICollection<T> items,
+      bool ensureMaximumOfOne)
     {
       if (target == typeof(Object) || target == null)
       {
@@ -169,8 +173,8 @@ namespace Machine.Specifications.Factories
       if (ensureMaximumOfOne && fields.Count() > 1)
       {
         throw new SpecificationUsageException(String.Format("You cannot have more than one {0} clause in {1}",
-                                                            typeof(T).Name,
-                                                            target.FullName));
+          typeof(T).Name,
+          target.FullName));
       }
       var field = fields.FirstOrDefault();
 
@@ -179,15 +183,33 @@ namespace Machine.Specifications.Factories
         var val = (T) field.GetValue(instance);
         items.Add(val);
       }
-      CollectDetailsOf(target.BaseType, () => instance, items,ensureMaximumOfOne);
-      CollectDetailsOf(target.DeclaringType, () => Activator.CreateInstance(target.DeclaringType), items,ensureMaximumOfOne);
+      CollectDetailsOf(target.BaseType, () => instance, items, ensureMaximumOfOne);
+      CollectDetailsOf(target.DeclaringType,
+        () => Activator.CreateInstance(GetDeclaringType(instance)),
+        items,
+        ensureMaximumOfOne);
     }
 
-    static List<T> ExtractPrivateFieldValues<T>(object instance,bool ensureMaximumOfOne)
+    static Type GetDeclaringType(object instance)
+    {
+      var targetType = instance.GetType();
+      var declaringType = targetType.DeclaringType;
+
+      if (declaringType == typeof(object)) return declaringType;
+      if (!declaringType.ContainsGenericParameters) return declaringType;
+
+      var numberOfGenericParametersToProvideToEnclosingType = declaringType.GetGenericTypeDefinition().GetGenericArguments().Count();
+      var parameters = targetType.GetGenericArguments().Take(numberOfGenericParametersToProvideToEnclosingType);
+      var typeDefinition = declaringType.MakeGenericType(parameters.ToArray());
+
+      return typeDefinition;
+    }
+
+    static List<T> ExtractPrivateFieldValues<T>(object instance, bool ensureMaximumOfOne)
     {
       var delegates = new List<T>();
       var type = instance.GetType();
-      CollectDetailsOf(type, () => instance, delegates,ensureMaximumOfOne);
+      CollectDetailsOf(type, () => instance, delegates, ensureMaximumOfOne);
 
       return delegates;
     }

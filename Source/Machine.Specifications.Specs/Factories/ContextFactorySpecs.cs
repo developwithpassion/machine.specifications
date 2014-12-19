@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 
 using Machine.Specifications.Factories;
 using Machine.Specifications.Model;
@@ -120,7 +121,6 @@ namespace Machine.Specifications.Specs.Factories
         = () =>
           new_context.ShouldNotBeNull();
 
-
     static Context new_context;
   }
 
@@ -152,8 +152,8 @@ namespace Machine.Specifications.Specs.Factories
 
     It should_capture_the_tags =
       () => newContext.Tags.ShouldContainOnly(new Tag(tag2.example),
-                                              new Tag(tag2.some_other_tag),
-                                              new Tag(tag2.one_more_tag));
+        new Tag(tag2.some_other_tag),
+        new Tag(tag2.one_more_tag));
   }
 
   [Subject(typeof(ContextFactory))]
@@ -169,5 +169,68 @@ namespace Machine.Specifications.Specs.Factories
 
     It should_capture_the_tags_once =
       () => newContext.Tags.Count().ShouldEqual(1);
+  }
+
+  [Subject(typeof(ContextFactory))]
+  public class when_creating_a_context_that_is_nested_inside_of_a_generic_class
+  {
+    public class and_the_nested_context_is_not_a_generic_type_definition
+    {
+      static Context newContext;
+
+      Establish context = () =>
+      {
+        var factory = new ContextFactory();
+        newContext = factory.CreateContextFrom(new generic_container<int>.nested_context());
+      };
+
+      It should_be_able_to_create_the_context_even_though_the_enclosing_class_is_generic =
+        () => newContext.ShouldNotBeNull();
+    }
+
+    public class and_the_nested_context_is_a_generic_type_definition
+    {
+      static Context newContext;
+
+      Establish context = () =>
+      {
+        var factory = new ContextFactory();
+        newContext = factory.CreateContextFrom(new generic_container<int>.nested_generic_context<String>());
+      };
+
+      It should_be_able_to_create_the_context_even_though_the_enclosing_class_is_generic =
+        () => newContext.ShouldNotBeNull();
+    }
+
+    public class and_there_are_multiple_generic_parents
+    {
+      public class and_the_nested_context_is_not_generic
+      {
+        static Context newContext;
+
+        Establish context = () =>
+        {
+          var factory = new ContextFactory();
+          newContext = factory.CreateContextFrom(new generic_container<int>.nested_generic_context<string>.nested_nested_non_generic());
+        };
+
+        It should_be_able_to_create_the_context_even_though_the_enclosing_class_is_generic =
+          () => newContext.ShouldNotBeNull();
+      }
+
+      public class and_the_nested_context_generic
+      {
+        static Context newContext;
+
+        Establish context = () =>
+        {
+          var factory = new ContextFactory();
+          newContext = factory.CreateContextFrom(new generic_container<int>.nested_generic_context<string>.nested_nested_generic<bool>());
+        };
+
+        It should_be_able_to_create_the_context_even_though_the_enclosing_class_is_generic =
+          () => newContext.ShouldNotBeNull();
+      }
+    }
   }
 }

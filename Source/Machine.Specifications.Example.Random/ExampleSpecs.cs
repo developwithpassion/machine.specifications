@@ -290,4 +290,32 @@ namespace Machine.Specifications.Specs
       It should_be_run = () => { };
     }
   }
+
+  public class generic_container<SomeType>
+  {
+    [Subject(tag.example)]
+    public class nested_context
+    {
+      
+    }
+
+    [Subject(tag.example)]
+    public class nested_generic_context<OtherType>
+    {
+
+
+      [Subject(tag.example)]
+      public class nested_nested_non_generic
+      {
+        
+      }
+
+      [Subject(tag.example)]
+      public class nested_nested_generic<OneMoreType>
+      {
+        
+      }
+    }
+  }
+
 }
